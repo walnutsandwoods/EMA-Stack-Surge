@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 import pandas_ta as ta
 
-def get_stock_list(file_path='top120.txt'):
+def get_stock_list(file_path='top150.txt'):
     """Reads a list of stock symbols from a text file."""
     with open(file_path, 'r') as f:
         stocks = [line.strip() for line in f.readlines()]

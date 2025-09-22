@@ -1,4 +1,5 @@
 yfinance
 pandas-ta
-python-telegram-bot
 schedule
+requests
+python-dotenv

@@ -93,17 +93,5 @@ class Scanner:
                 print(f"Error processing {stock}: {e}")
                 continue
 
-if __name__ == '__main__':
-    # Test the Scanner
-    async def main():
-        alert_manager = AlertManager()
-        scanner = Scanner(alert_manager)
-
-        # Test with a single timeframe
-        scanner.run_scan('5m')
-
-        # Send any alerts found
-        await alert_manager.send_batch()
-
-    import asyncio
-    asyncio.run(main())
+# This file is not intended to be run directly.
+# Please use main.py as the entry point.
