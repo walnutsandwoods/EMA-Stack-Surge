@@ -16,7 +16,7 @@ class Scanner:
         self.stock_list = get_stock_list()
         self.alert_manager = alert_manager
 
-    def check_setup(self, df, timeframe):
+    def check_setup(self, df, timeframe, symbol):
         """Checks for bullish and bearish setups in the data."""
         if df.empty or len(df) < 21: # Ensure enough data for 20-period VMA
             return None
@@ -37,44 +37,56 @@ class Scanner:
         atr = latest['ATRr_14']
 
         # --- Bullish Setup Check ---
+        # 1. Calculate all four boolean conditions
         ema_stack_bullish = ema5 > ema9 > ema21
         rsi_bullish = rsi > 50
         volume_surge_bullish = (volume > 1.5 * volume_ma) if timeframe == '5m' else (volume > 1.2 * volume_ma)
         macd_bullish = macd_line > macd_signal and macd_hist > 0
 
-        if ema_stack_bullish and rsi_bullish and macd_bullish:
+        # 2. Calculate the favor score
+        favor_score_bullish = sum([ema_stack_bullish, rsi_bullish, volume_surge_bullish, macd_bullish])
+
+        # 3. Check if the score is high enough
+        if favor_score_bullish >= 3:
+            # 4. If score is high enough, check for the price dip action
             for ema_period, ema_val in [(5, ema5), (9, ema9)]:
                 price_dip_bullish = (previous['Low'] <= ema_val * 1.02) and (latest['Close'] > ema_val)
                 if price_dip_bullish:
-                    favor_score = sum([ema_stack_bullish, rsi_bullish, volume_surge_bullish, macd_bullish])
-                    if favor_score >= 3:
-                        alert_data = {
-                            'setup_type': 'bullish', 'symbol': latest.name, 'timeframe': timeframe,
-                            'score': favor_score, 'close_price': latest['Close'], 'ema_bounced': ema_period,
-                            'rsi': rsi, 'volume_ratio': volume / volume_ma if volume_ma > 0 else 0, 'atr': atr
-                        }
-                        logging.info(f"{latest.name},{timeframe},bullish,{latest['Close']},{favor_score}")
-                        return alert_data
+                    # All conditions met, generate alert
+                    alert_data = {
+                        'setup_type': 'bullish', 'symbol': symbol, 'timeframe': timeframe,
+                        'score': favor_score_bullish, 'close_price': latest['Close'], 'ema_bounced': ema_period,
+                        'rsi': rsi, 'volume_ratio': volume / volume_ma if volume_ma > 0 else 0, 'atr': atr,
+                        'ema5': ema5
+                    }
+                    logging.info(f"{symbol},{timeframe},bullish,{latest['Close']},{favor_score_bullish}")
+                    return alert_data
 
         # --- Bearish Setup Check ---
+        # 1. Calculate all four boolean conditions
         ema_stack_bearish = ema5 < ema9 < ema21
         rsi_bearish = rsi < 50
         volume_surge_bearish = (volume > 1.5 * volume_ma) if timeframe == '5m' else (volume > 1.2 * volume_ma)
         macd_bearish = macd_line < macd_signal and macd_hist < 0
 
-        if ema_stack_bearish and rsi_bearish and macd_bearish:
+        # 2. Calculate the favor score
+        favor_score_bearish = sum([ema_stack_bearish, rsi_bearish, volume_surge_bearish, macd_bearish])
+
+        # 3. Check if the score is high enough
+        if favor_score_bearish >= 3:
+            # 4. If score is high enough, check for the price rally action
             for ema_period, ema_val in [(5, ema5), (9, ema9)]:
                 price_rally_bearish = (previous['High'] >= ema_val * 0.98) and (latest['Close'] < ema_val)
                 if price_rally_bearish:
-                    favor_score = sum([ema_stack_bearish, rsi_bearish, volume_surge_bearish, macd_bearish])
-                    if favor_score >= 3:
-                        alert_data = {
-                            'setup_type': 'bearish', 'symbol': latest.name, 'timeframe': timeframe,
-                            'score': favor_score, 'close_price': latest['Close'], 'ema_bounced': ema_period,
-                            'rsi': rsi, 'volume_ratio': volume / volume_ma if volume_ma > 0 else 0, 'atr': atr
-                        }
-                        logging.info(f"{latest.name},{timeframe},bearish,{latest['Close']},{favor_score}")
-                        return alert_data
+                    # All conditions met, generate alert
+                    alert_data = {
+                        'setup_type': 'bearish', 'symbol': symbol, 'timeframe': timeframe,
+                        'score': favor_score_bearish, 'close_price': latest['Close'], 'ema_bounced': ema_period,
+                        'rsi': rsi, 'volume_ratio': volume / volume_ma if volume_ma > 0 else 0, 'atr': atr,
+                        'ema5': ema5
+                    }
+                    logging.info(f"{symbol},{timeframe},bearish,{latest['Close']},{favor_score_bearish}")
+                    return alert_data
 
         return None
 
@@ -84,13 +96,19 @@ class Scanner:
         period = '5d' if timeframe == '5m' else '60d'
 
         for stock in self.stock_list:
+            if self.alert_manager.daily_alert_count >= self.alert_manager.max_daily_alerts:
+                print("Max daily alerts reached. Halting scan for this cycle.")
+                break
+
             # Cooldown check is now handled by the AlertManager
             try:
                 data = get_stock_data(stock, interval=timeframe, period=period)
                 if not data.empty:
                     data_with_indicators = calculate_indicators(data.copy(), timeframe)
-                    alert_data = self.check_setup(data_with_indicators, timeframe)
+                    alert_data = self.check_setup(data_with_indicators, timeframe, stock)
                     if alert_data:
+                        if alert_data['setup_type'] == 'bearish':
+                            print(f"[DEBUG] Bearish setup found for {stock}. Passing to AlertManager.")
                         self.alert_manager.add_alert_to_batch(alert_data)
 
             except Exception as e:

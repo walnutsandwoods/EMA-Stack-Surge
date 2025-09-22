@@ -2,6 +2,7 @@ import os
 import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
+import html
 
 # Construct path to .env file
 script_dir = os.path.dirname(__file__)
@@ -33,7 +34,7 @@ class AlertManager:
     def format_alert(self, alert_data):
         """Formats an alert message with all required details using HTML."""
         setup_type = alert_data['setup_type']
-        symbol = alert_data['symbol']
+        symbol = html.escape(alert_data['symbol'])
         timeframe = alert_data['timeframe']
         score = alert_data['score']
         close_price = alert_data['close_price']
@@ -41,6 +42,7 @@ class AlertManager:
         rsi = alert_data['rsi']
         volume_ratio = alert_data['volume_ratio']
         atr = alert_data['atr']
+        ema5 = alert_data['ema5']
 
         if setup_type == 'bullish':
             emoji = "🚀"
@@ -48,14 +50,14 @@ class AlertManager:
             action = "Buy ATM Call"
             sl_price = close_price - (atr * 1.5)
             trail_sl_info = f"Trail SL below 9 EMA (5-min) or 21 EMA (1-hr)."
-            exit_signal = "Exit if MACD crosses down or RSI > 70"
+            exit_signal = f"Exit if price closes below 5 EMA (~{ema5:.2f})"
         else:  # Bearish
             emoji = "🐻"
             trade_type = "<b>Bearish Rejection</b>"
             action = "Buy ATM Put"
             sl_price = close_price + (atr * 1.5)
             trail_sl_info = f"Trail SL above 9 EMA (5-min) or 21 EMA (1-hr)."
-            exit_signal = "Exit if MACD crosses up or RSI < 30"
+            exit_signal = f"Exit if price closes above 5 EMA (~{ema5:.2f})"
 
         message = (
             f"{emoji} {trade_type}: {symbol} ({timeframe})\n"
@@ -64,12 +66,13 @@ class AlertManager:
             f"Details: RSI({rsi:.1f}), Vol({volume_ratio:.1f}x Avg)\n"
             f"<b>Action:</b> {action}, Initial SL: <code>{sl_price:.2f}</code>\n"
             f"<i>Trailing SL: {trail_sl_info}</i>\n"
-            f"<i>Exit Signal: {exit_signal}</i>"
+            f"<b>Exit Signal: {exit_signal}</b>"
         )
         return message
 
     def add_alert_to_batch(self, alert_data):
         """Checks cooldown, formats alert, and adds it to the batch."""
+        print(f"[DEBUG] AlertManager received: {alert_data}")
         symbol = alert_data['symbol']
         if self.is_on_cooldown(symbol):
             return False
