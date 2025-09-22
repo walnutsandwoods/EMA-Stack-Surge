@@ -1,10 +1,15 @@
 import yfinance as yf
 import pandas as pd
 import pandas_ta as ta
+import os
 
 def get_stock_list(file_path='top150.txt'):
     """Reads a list of stock symbols from a text file."""
-    with open(file_path, 'r') as f:
+    # Construct path relative to this script's location
+    script_dir = os.path.dirname(__file__)
+    absolute_file_path = os.path.join(script_dir, file_path)
+
+    with open(absolute_file_path, 'r') as f:
         stocks = [line.strip() for line in f.readlines()]
     return stocks
 

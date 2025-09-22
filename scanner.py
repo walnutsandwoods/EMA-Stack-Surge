@@ -3,8 +3,12 @@ from utils import get_stock_list, get_stock_data, calculate_indicators
 from alerts import AlertManager
 import logging
 from datetime import datetime
+import os
 
-logging.basicConfig(filename='scan_log.csv', level=logging.INFO,
+# Setup logging to a file in the script's directory
+script_dir = os.path.dirname(__file__)
+log_file_path = os.path.join(script_dir, 'scan_log.csv')
+logging.basicConfig(filename=log_file_path, level=logging.INFO,
                     format='%(asctime)s,%(message)s', datefmt='%Y-%m-%d %H:%M:%S')
 
 class Scanner:

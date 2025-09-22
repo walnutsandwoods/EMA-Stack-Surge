@@ -3,8 +3,12 @@ import requests
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 
+# Construct path to .env file
+script_dir = os.path.dirname(__file__)
+dotenv_path = os.path.join(script_dir, '.env')
+
 # Load environment variables from .env file
-load_dotenv()
+load_dotenv(dotenv_path=dotenv_path)
 
 class AlertManager:
     def __init__(self):
