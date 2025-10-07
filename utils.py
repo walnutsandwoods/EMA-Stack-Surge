@@ -3,7 +3,7 @@ import pandas as pd
 import pandas_ta as ta
 import os
 
-def get_stock_list(file_path='top150.txt'):
+def get_stock_list(file_path='watchlist.txt'):
     """Reads a list of stock symbols from a text file."""
     # Construct path relative to this script's location
     script_dir = os.path.dirname(__file__)
